@@ -1,1 +1,1210 @@
-ALL Resources
+AWSTemplateFormatVersion: '2010-09-09'
+
+
+Description: 'AWS CloudFormation Sample Template EC2InstanceWithSecurityGroupSample: Create an Amazon EC2 instance running the Amazon Linux AMI. The AMI is chosen based on the region in which the stack is run. This example creates an EC2 security group for the instance to give you SSH access. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.'
+
+Metadata:
+  License: Apache-2.0
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - EnvironmentName
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+      - Label:
+          default: "EC2 Configuration"
+        Parameters:
+          - KeyName
+          - KubernetesClientInstanceType
+          - KubernetesController1InstanceType
+          - KubernetesController2InstanceType
+          - KubernetesController3InstanceType
+          - KubernetesProxyInstanceType
+          - KubernetesWorker1InstanceType
+          - KubernetesWorker2InstanceType
+          - KubernetesWorker3InstanceType
+          - KubernetesBastionInstanceType
+          - AnsibleInstanceType
+      - Label:
+          default: "Access Configuration"
+        Parameters:
+          - BastionSSHLocation
+      - Label:
+          default: "AMI Type"
+        parameters:
+          -  AmiType
+
+
+    ParameterLabels:
+      EnvironmentName:
+        default: "Environment Name"
+      VpcCIDR:
+        default: "VPC CIDR Block"
+      PublicSubnet1CIDR:
+        default: "Public Subnet 1 CIDR Block"
+      PublicSubnet2CIDR:
+        default: "Public Subnet 2 CIDR Block"
+      PrivateSubnet1CIDR:
+        default: "Private Subnet 1 CIDR Block"
+      PrivateSubnet2CIDR:
+        default: "Private Subnet 2 CIDR Block"
+      KeyName:
+        default: "SSH Key Pair Name"
+      KubernetesClientInstanceType:
+        default: "Instance Type for Kubernetes Client"
+      KubernetesController1InstanceType:
+        default: "Instance Type for Kubernetes Controller 1"
+      KubernetesController2InstanceType:
+        default: "Instance Type for Kubernetes Controller 2"
+      KubernetesController3InstanceType:
+        default: "Instance Type for Kubernetes Controller 3"
+      KubernetesProxyInstanceType:
+        default: "Instance Type for Kubernetes Nginx Proxy"
+      KubernetesWorker1InstanceType:
+        default: "Instance Type for Kubernetes Worker 1"
+      KubernetesWorker2InstanceType:
+        default: "Instance Type for Kubernetes Worker 2"
+      KubernetesWorker3InstanceType:
+        default: "Instance Type for Kubernetes Worker 3"
+      KubernetesBastionInstanceType:
+        default: "Instance Type for Kubernetes Bastion"
+      AnsibleInstanceType:
+        default: "Instance Type for Ansible"
+      BastionSSHLocation:
+        default: "SSH Access CIDR for Bastion"
+      AmiType:
+        default: "Ubuntu20FocalFossa2004LTSUSE1"
+
+
+Mappings:
+  RegionAMIMap:
+    us-east-1:
+      Ubuntu20t2medUSE1: "ami-06aa3f7caf3a30282"  
+      Ubuntu22JammyJellyfish2204LTSUSE11: "ami-0e783882a19958fff"  
+    us-west-1:
+      Ubuntu20FocalFossa2004LTSUSW1: "ami-06de4e4d34dc642c8"  
+      Ubuntu22JammyJellyfish2204LTSUSW11: "ami-0f324e1cd5c4465c8"   
+Parameters:
+
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names i.e Kubernetes the hard way with ansible 
+    Type: String
+    Default: kthwwa
+
+  AmiType:
+    Description: The type of AMI to use
+    Type: String
+    Default: Ubuntu20t2medUSE1
+    AllowedValues:
+      - Ubuntu20t2medUSE1
+      - Ubuntu22JammyJellyfish2204LTSUSE11
+      - Ubuntu20FocalFossa2004LTSUSW1
+      - Ubuntu22JammyJellyfish2204LTSUSW11
+    ConstraintDescription: Must be a valid AMI type defined in the mappings.
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    
+  KubernetesClientInstanceType:
+    Description: Select machine type for Kubernetes client
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+    
+  KubernetesController1InstanceType:
+    Description: Select machine type for Kubernetes Controller 1
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+  
+  KubernetesController2InstanceType:
+    Description: Select machine type for Kubernetes Controller 2
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  KubernetesController3InstanceType:
+    Description: Select machine type for Kubernetes Controller 3
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+    
+  KubernetesProxyInstanceType:
+    Description: Select machine type for Kubernetes Nginx Proxy
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+    
+  KubernetesWorker1InstanceType:
+    Description: Select machine type for Kubernetes Worker 1
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+    
+  KubernetesWorker2InstanceType:
+    Description: Select machine type for Kubernetes Worker 2
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+    
+  KubernetesWorker3InstanceType:
+    Description: Select machine type for Kubernetes Worker 3
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  KubernetesBastionInstanceType:
+    Description: Select machine type for Kubernetes Bastion 
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  AnsibleInstanceType:
+    Description: Select machine type for Ansible
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g3.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r3.12xlarge
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - d2.xlarge
+      - d2.2xlarge
+      - d2.4xlarge
+      - d2.8xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  
+  BastionSSHLocation:
+    Description: The IP address range that can be used to SSH to the Bastion EC2  Instance
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 0.0.0.0/0
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    
+
+  
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.192.0.0/16
+    MinLength: 9
+    MaxLength: 18
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    
+
+  PublicSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.192.10.0/24
+    MinLength: 9
+    MaxLength: 18
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    
+  PublicSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.192.11.0/24
+    MinLength: 9
+    MaxLength: 18
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+    Type: String
+    Default: 10.192.20.0/24
+    MinLength: 9
+    MaxLength: 18
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    
+  PrivateSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+    Type: String
+    Default: 10.192.21.0/24
+    MinLength: 9
+    MaxLength: 18
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+
+
+
+  
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-VPC"
+          
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-InternetGateway"
+          
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PublicSubnet(AZ1)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PublicSubnet(AZ2)
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PrivateSubnet(AZ1)
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PrivateSubnet(AZ2)
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PublicRoutes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PrivateRoutes(AZ1)
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-PrivateRoutes(AZ2)
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  BastionSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: "Security group that allows SSH access from MyPublicIP"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref BastionSSHLocation
+  
+  
+  PrivateInstanceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: "Security group for private instances, accessible only via the Bastion host"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref BastionSecurityGroup
+
+
+  BastionEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesBastionInstanceType'
+      SubnetId: !GetAtt PublicSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'BastionSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-BastionEC2Instance
+      
+  KubernetesClientEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesClientInstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType] 
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesClientEC2Instance
+      
+  KubernetesController1EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesController1InstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]   
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesController1EC2Instance
+      
+  KubernetesController2EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesController2InstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]   
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesController2EC2Instance
+      
+  KubernetesController3EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesController3InstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType] 
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesController3EC2Instance
+      
+  KubernetesProxyEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesProxyInstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]  
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesProxyEC2Instance
+      
+  KubernetesWorker1EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesWorker1InstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]   
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesWorker1EC2Instance
+      
+  KubernetesWorker2EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesWorker2InstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]  
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesWorker2EC2Instance
+      
+  KubernetesWorker3EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'KubernetesWorker3InstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]  
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-KubernetesWorker3EC2Instance
+      
+  AnsibleEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref 'AnsibleInstanceType'
+      SubnetId: !GetAtt PrivateSubnet1.SubnetId
+      SecurityGroupIds:
+        - !GetAtt 'PrivateInstanceSecurityGroup.GroupId'
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [RegionAMIMap, !Ref "AWS::Region", !Ref AmiType]  
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-AnsibleEC2Instance
+
+
+Outputs:
+
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+
+  PublicSubnet2:
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref PublicSubnet2
+
+  PrivateSubnet1:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+
+  PrivateSubnet2:
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+
+  BastionSecurityGroup:
+    Description: Security group with  ingress rule
+    Value: !Ref BastionSecurityGroup
+
+  PrivateInstanceSecurityGroup:
+    Description: Security group with  ingress rule
+    Value: !Ref PrivateInstanceSecurityGroup
+
+  
+  BastionEC2InstanceDetails:
+    Description: "Comprehensive details of the BastionEC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref BastionEC2Instance
+         AvailabilityZone: !GetAtt BastionEC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt BastionEC2Instance.PrivateIp
+         PublicDnsName: !GetAtt BastionEC2Instance.PublicDnsName
+         SecurityGroups: !Ref BastionSecurityGroup  
+  
+  
+  KubernetesClientEC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesClientEC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesClientEC2Instance
+         AvailabilityZone: !GetAtt KubernetesClientEC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesClientEC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesClientEC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  KubernetesController1EC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesController1EC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesController1EC2Instance
+         AvailabilityZone: !GetAtt KubernetesController1EC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesController1EC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesController1EC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  KubernetesController2EC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesController2EC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesController2EC2Instance
+         AvailabilityZone: !GetAtt KubernetesController2EC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesController2EC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesController2EC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  KubernetesController3EC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesController3EC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesController3EC2Instance
+         AvailabilityZone: !GetAtt KubernetesController3EC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesController3EC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesController3EC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  KubernetesProxyEC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesProxyEC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesProxyEC2Instance
+         AvailabilityZone: !GetAtt KubernetesProxyEC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesProxyEC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesProxyEC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  KubernetesWorker1EC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesWorker1EC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesWorker1EC2Instance
+         AvailabilityZone: !GetAtt KubernetesWorker1EC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesWorker1EC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesWorker1EC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  KubernetesWorker2EC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesWorker2EC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesWorker2EC2Instance
+         AvailabilityZone: !GetAtt KubernetesWorker2EC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesWorker2EC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesWorker2EC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  KubernetesWorker3EC2InstanceDetails:
+    Description: "Comprehensive details of the KubernetesWorker3EC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref KubernetesWorker3EC2Instance
+         AvailabilityZone: !GetAtt KubernetesWorker3EC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt KubernetesWorker3EC2Instance.PrivateIp
+         PublicDnsName: !GetAtt KubernetesWorker3EC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  AnsibleEC2InstanceInstanceDetails:
+    Description: "Comprehensive details of the AnsibleEC2Instance "
+    Value: 
+      !Sub 
+       - |
+         {
+           "InstanceId": "${InstanceId}",
+           "AvailabilityZone": "${AvailabilityZone}",
+           "PrivateIp": "${PrivateIp}",
+           "PublicDnsName": "${PublicDnsName}",
+           "SecurityGroups": "${SecurityGroups}",
+         }
+       - InstanceId: !Ref AnsibleEC2Instance
+         AvailabilityZone: !GetAtt AnsibleEC2Instance.AvailabilityZone
+         PrivateIp: !GetAtt AnsibleEC2Instance.PrivateIp
+         PublicDnsName: !GetAtt AnsibleEC2Instance.PublicDnsName
+         SecurityGroups: !Ref PrivateInstanceSecurityGroup
+
+  
